@@ -2,22 +2,13 @@ import requests
 import json
 
 
-class API:
+class BaiduMap:
     def __init__(self, ak):
         self.ak = ak
 
     def fetch(self, url, **kwargs):
         kwargs['ak'] = self.ak
         return requests.get(url, kwargs).json()
-
-
-class Direction(API):
-    """路线规划服务
-    又名Direction API，是一套REST风格的Web服务API，以HTTP/HTTPS形式提供了路线规划功能，是Direction API v1.0的升级版本。
-    目前，Direction API v2.0率先对外开放了公交线路规划功能：
-    全面支持跨城公交路线规划
-    支持 公交、地铁、火车、飞机、城际大巴多种公共出行方式。
-    """
 
     def transit(self, origin, destination, **kwargs):
         """公交路线规划
@@ -42,14 +33,26 @@ class Direction(API):
     def transit_cost(self, origin, destination, **kwargs):
         """所需时间、均价
         """
+        public_duration, public_price, taxi_duration, taxi_price = (None for _ in range(4))
+
         res = self.transit(origin, destination, **kwargs)
         if res['status'] == 0:
             res = res['result']
-            (public_duration, public_price) = (res['routes'][0]['duration'], res['routes'][0]['price']) if res['routes'] \
-                else (None, None)
-            (taxi_duration, taxi_price) = (res['taxi']['duration'], res['taxi']['detail'][0]['total_price']) if res[
-                'taxi'] \
-                else (None, None)
-            return public_duration, public_price, taxi_duration, taxi_price
-        else:
-            return None, None, None, None
+            try:
+                public_duration, public_price = res['routes'][0]['duration'], res['routes'][0]['price']
+            except Exception:
+                print('>>> No public info.')
+            try:
+                taxi_duration, taxi_price = res['taxi']['duration'], res['taxi']['detail'][0]['total_price']
+            except Exception:
+                print('>>> No taxi info.')
+
+        print(f'>>>{origin} TO {destination}: {public_duration}, {public_price}, {taxi_duration}, {taxi_price}')
+        return public_duration, public_price, taxi_duration, taxi_price
+
+    def search(self, query, **kwargs):
+        """地点检索服务
+        详见http://lbsyun.baidu.com/index.php?title=webapi/guide/webservice-placeapi
+        """
+        url = 'http://api.map.baidu.com/place/v2/search'
+        return self.fetch(url, query=query, output=json, scope=2, page_size=20, **kwargs)

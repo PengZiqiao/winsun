@@ -17,10 +17,12 @@ class PPT:
         page_idx, shape_idx = key
 
         # 填入文字
-        if type(value) is str:
+        if isinstance(value, str):
             self.slides[page_idx].shapes[shape_idx].text = value
+        elif isinstance(value, int) or isinstance(value, float):
+            self.slides[page_idx].shapes[shape_idx].text = str(value)
         # DataFrame填入表格
-        elif type(value) is DataFrame:
+        elif isinstance(value, DataFrame):
             tb = self.slides[page_idx].shapes[shape_idx].table
             self.df2table(tb, value)
         # 异常
