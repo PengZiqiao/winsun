@@ -21,6 +21,9 @@ SHANGYE = ('底商商业', '专业市场商业', '集中商业', '街区商业',
 QUANSHI = ('城中', '城东', '城南', '河西', '城北', '仙西', '江宁', '浦口', '六合', '溧水', '高淳')
 BUHANLIGAO = QUANSHI[:-2]
 
+MJD_BINDS = []
+DJD_BINDS = list(range(4000, 51000, 1000))
+ZJD_BINDS = []
 
 def str2date(text: str):
     """将“xxxx-xx-xx”格式的字符串转换为date"""
@@ -94,7 +97,7 @@ class Query:
             index_label = [f'{x.monday_str}-{x.sunday_str}' for x in index]
 
             # date range
-            index_sql = [int(f'{x.monday.year}{x.N}') for x in index]
+            index_sql = [int(f'{x.monday.year}{x.N:02d}') for x in index]
             date_range = [index_sql[0], index_sql[-1]]
         else:
             d = Month()
@@ -188,7 +191,10 @@ class Query:
             columns.insert(1, 'book')
         df[columns] = df[columns] if volumn == 'set' else (df[columns] / 1e4).round(2)
         df[columns] = df[columns].fillna(0)
-        df['price'] = df['price'].round(0)
+        try:
+            df['price'] = df['price'].round(0)
+        except:
+            pass
         columns.append('price')
 
         return df[columns]
@@ -213,7 +219,7 @@ class Query:
         if 'Week' in table.__name__:
             d = Week()
             date_range = [d.before(period - 1), d]
-            date_range = [f'{x.monday.year}{x.N}' for x in date_range]
+            date_range = [f'{x.monday.year}{x.N:02d}' for x in date_range]
         else:
             d = Month()
             date_range = [d.before(period - 1), d]
@@ -249,6 +255,7 @@ class Query:
     def cut(self, binds, date_type='week', period=12, usage=ZHUZHAI, plate=QUANSHI, by='mjd'):
         binds.insert(0, 0)
         binds.append(9e8)
+
         date_range, index_sql, index_label = self.render_date(date_type, period)
         if date_type == 'week':
             table = WeekSold

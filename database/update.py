@@ -3,6 +3,7 @@ import os
 from argparse import ArgumentParser
 
 from lxml import etree
+from winsun.utils import Spider
 from winsun.database.model import MonthBook, MonthSale, MonthSold, WeekBook, WeekSale, WeekSold
 from winsun.database.model import Session, MianjiDuan, DanjiaDuan, ZongjiaDuan, TaoXing
 from winsun.database.query import str2date
@@ -11,14 +12,13 @@ from winsun.tools import GisSpider
 path = 'E:/gisDataBase'
 
 
-# TODO: 抽空重写json文件，编码太坑
-def load(filename):
-    """打开json文件"""
-    with open(f'{path}/{filename}.json', 'r') as f:
-        # return json.load(f)
-        obj = f.read().encode('utf-8').decode('unicode-escape')
-        obj = obj.replace('é\x94\x98ç¸\x96', '[')
-        return json.loads(obj)
+# def load(filename):
+#     """打开json文件"""
+#     with open(f'{path}/{filename}.json', 'r') as f:
+#         # return json.load(f)
+#         obj = f.read().encode('utf-8').decode('unicode-escape')
+#         obj = obj.replace('é\x94\x98ç¸\x96', '[')
+#         return json.loads(obj)
 
 
 def jiegou(by):
@@ -156,7 +156,7 @@ class GisAPI:
         self.month_option = tree.xpath("//select[@name='m2']/option/@value")
 
     def get(self, **kwargs):
-        # get
+        # 取得json
         url = 'http://winsun.house365.com/sys/dataout/data'
         for i, each in enumerate(kwargs):
             arg = f'{each}={kwargs[each]}'
@@ -170,6 +170,7 @@ class GisAPI:
         return tree.xpath("//pre/text()")[0]
 
     def write(self, file, text):
+        # 将json写入文件
         with open(file, 'w') as f:
             f.write(text)
         return None
@@ -195,6 +196,97 @@ class GisAPI:
             market(json.loads(text), f'{type_}_{t}')
         return None
 
+# TODO: 还没有测试
+class Updata(Spider):
+    def load(self, filename):
+        """打开一个json文件,返回object"""
+        with open(f'{path}/{filename}.json', 'r') as f:
+            return json.load(f)
+
+    def write(self, text, type_, date, table):
+        """将获得的json文本写入文件"""
+        with open(f'{path}/{type_}_{table}/{date}.json', 'w') as f:
+            f.write(text)
+        print(f'>>> 【{type_} {table} {date}】is written into file.')
+
+    def login(self):
+        """登录gis,设置cookies和headers"""
+        url = 'winsun.house365.com'
+        self.set_cookies(f'http://{url}')
+        self.session.headers.update({'Host': url, 'Referer': f'http://{url}/'})
+
+    def get(self, type_, date, table):
+        """获得市场数据
+        :param type_: 'month' or 'week'
+        :param date: '2018-01-01' for month or '201801' for week
+        :param table: 'sale', 'book', 'sold'
+        :return: result: json 形式的 string
+        """
+        url = 'http://winsun.house365.com/sys/dataout/date'
+        args = {'type': type_, 't1': date, 't2': date, 't': table}
+        result = self.session.get(url, params=args).content
+        print(f'>>> 【{type_} {table} {date}】get!')
+        return result.replace(b'\xef\xbb\xbf', b'').decode()
+
+    def market(self, obj, type_, table):
+        """更新周月报表
+        :param obj: json对象
+        :param type_: 'month' or 'week'
+        :param table: 'sale', 'book', 'sold'
+        """
+        obj.reverse()
+        model = eval(f'{type_.capitalize()}{table.capitalize()}')
+        s = Session()
+
+        for rec in obj:
+            m = model()
+            m.id = int(rec['id'])
+            m.dist = rec['区属']
+            m.plate = rec['板块']
+            m.zone = rec['片区']
+            m.usage = rec['功能']
+            m.set = rec['件数']
+            m.space = rec['面积']
+            m.price = rec['均价']
+            m.money = rec['金额']
+            m.mjd_id = rec['面积段']
+            m.djd_id = rec['单价段']
+            m.zjd_id = rec['总价段']
+            m.taoxing_id = rec['套型']
+            m.proj_id = rec['prjid']
+            m.proj_name = rec['projectname']
+            m.pop_name = rec['popularizename']
+            m.permit_id = rec['permitid']
+            m.permit_no = rec['permitno']
+            m.permit_date = str2date(rec['perdate'])
+            m.update_time = rec['update_time']
+            m.presaleid = rec['presaleid']
+            if type_ == 'month':
+                m.date = str2date(rec['年月'])
+            else:
+                m.week = rec['星期']
+                m.start = str2date(rec['start_date'])
+                m.end = str2date(rec['end_date'])
+            s.update(m)
+        s.commit()
+
+    def get_write_update(self, type_, date, table):
+        """get、写入文件、 更新数据库"""
+        text = self.get_write(type_, date, table)
+        obj = json.loads(text)
+        self.market(obj, type_, table)
+
+    def get_write(self, type_, date, table):
+        """get并写入文件"""
+        text = self.get(type_, date, table)
+        self.write(text, type_, date, table)
+        return text
+
+    def load_update(self, type_, date, table):
+        """Load文件、更新数据库"""
+        obj = self.load(f'{type_}_{table}/{date}')
+        self.market(obj, type_, table)
+
 
 def update_once(type_):
     # def build_args():
@@ -213,6 +305,7 @@ if __name__ == '__main__':
         parser = ArgumentParser()
         parser.add_argument("type", choices=['week', 'month'])
         return parser.parse_args()
+
 
     gis = GisAPI()
     type_ = build_args().type

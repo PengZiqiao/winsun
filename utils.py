@@ -2,6 +2,8 @@ from numpy import isnan
 from pandas.tseries.offsets import DateOffset, MonthBegin
 import datetime
 import calendar
+from selenium import webdriver
+import requests
 
 
 def growth_rate(a, b):
@@ -55,14 +57,14 @@ class Week:
     monday_str = monday.strftime('%Y%m%d')
 
     # 周数
-    N = int(monday.strftime('%U'))
+    N = int(sunday.strftime('%U')) if monday.year == 2018 else int(monday.strftime('%U'))
 
     def before(self, i):
         """从上周起往前的第i周"""
         w = Week()
         w.monday = self.monday - datetime.timedelta(weeks=i)
         w.sunday = self.sunday - datetime.timedelta(weeks=i)
-        w.N = int(w.monday.strftime('%U'))
+        w.N = int(w.sunday.strftime('%U')) if w.monday.year == 2018 else int(w.monday.strftime('%U'))
         return w
 
     def str_format(self, format):
@@ -98,3 +100,32 @@ class Month:
 
     def __repr__(self):
         return f'<class Month: {self.str}>'
+
+
+class Spider:
+    def __init__(self):
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'zh-CN,zh;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Connection': 'keep-alive'
+        }
+
+        # selenium
+        options = webdriver.ChromeOptions()
+        for key, value in headers.items():
+            options.add_argument(f'{key}={value}')
+        self.driver = webdriver.Chrome(chrome_options=options)
+
+        # session
+        self.session = requests.Session()
+        self.session.headers = headers
+
+    def set_cookies(self, url):
+        """通过selenium登陆后获得cookies，并设定至requests.Session()"""
+        self.driver.get(url)
+        input('>>> 登陆完成后请按回车...')
+        cookies = self.driver.get_cookies()
+        cookies = dict((each['name'], each['value']) for each in cookies)
+        self.session.cookies = requests.utils.cookiejar_from_dict(cookies)
