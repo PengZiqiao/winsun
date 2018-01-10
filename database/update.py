@@ -1,6 +1,5 @@
 import json
 import os
-from argparse import ArgumentParser
 
 from winsun.utils import Spider
 from winsun.database.model import MonthBook, MonthSale, MonthSold, WeekBook, WeekSale, WeekSold
@@ -178,30 +177,16 @@ class Updata(Spider):
                 self.load_update(type_, date, table)
 
 
-# def update_once(type_):
-    # def build_args():
-    #     parser = ArgumentParser()
-    #     parser.add_argument("type", choices=['week', 'month'])
-    #     return parser
-
-    # gis = GisAPI()
-    # type_ = build_args().type
-    # gis.update(type_)
-    # gis.driver.close()
-
-
 if __name__ == '__main__':
-    # def build_args():
-    #     parser = ArgumentParser()
-    #     parser.add_argument("type", choices=['week', 'month'])
-    #     return parser.parse_args()
-    #
-    #
-    # gis = GisAPI()
-    # type_ = build_args().type
-    # gis.update(type_)
-    # gis.driver.close()
     ud = Updata()
-    # ud.login()
+    ud.login()
+
+    # 日常更新
+    type_ = input('>>> 请输入更新报表类型(week/month)...\n')
+    date = input('>>> 请输入更新日期(如201802/2018-02-01)...\n')
+    for table in ['sale', 'book', 'sold']:
+        ud.get_write_update(type_, date, table)
+
+    # 批量下载json文件、初始化数据库
     # ud.batch_get()
-    ud.init_db()
+    # ud.init_db()
