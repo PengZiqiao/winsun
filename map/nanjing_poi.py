@@ -1,6 +1,6 @@
 ﻿import pandas as pd
 from openpyxl import Workbook
-from winsun.map.API import BaiduMap
+from winsun.map.__init__ import BaiduMap
 
 
 def search_poi(query, **kwargs):
