@@ -32,25 +32,43 @@ class BaiduMap:
         return self.fetch(url, origin=origin, destination=destination,
                           **kwargs)
 
-    def transit_cost(self, origin, destination, **kwargs):
-        """所需时间、均价
+    def driving(self, origin, destination, **kwargs):
+        """驾车路线规划
+        根据起点和终点检索符合条件的公共交通方案，
+        融入出行策略（少换乘、地铁优先等），
+        支持大陆区域的同城及跨城路线规划，
+        交通方式支持公交、地铁、火车、飞机、大巴。
+        :param origin: 纬度,经度组成的tuple或list，小数点后不超过6位，如：(40.056878,116.30815)
+        :param destination: 同上
+        :param origin_uid: 可选。POI 的 uid（在已知起点POI 的 uid 情况下，请尽量填写uid，将提升路线规划的准确性）
+        :param destination_uid: 同上
+        :param coord_type: string 起终点的坐标类型 "bd09ll"(默认) / "gcj02" / "wgs84"
+        :param tactics: int(0-11) 策略 0(默认) 推荐；详情请查阅百度地图web API文档
+        :param alternative: int(0-1) 是否返回备选路线 0(默认):返回一条推荐路线；1 返回1-3条路线供选择
+        :param plate_number: 车牌号，如"京A00022", 用于规避车牌号限行路段。
         """
-        public_duration, public_price, taxi_duration, taxi_price = (None for _ in range(4))
+        url = 'http://api.map.baidu.com/direction/v2/driving'
+        origin = ','.join(map(str, origin))
+        destination = ','.join(map(str, destination))
+        return self.fetch(url, origin=origin, destination=destination,
+                          **kwargs)
 
-        res = self.transit(origin, destination, **kwargs)
+    def duration(self, origin, destination, by=0, **kwargs):
+        """通勤所需时间
+        :param by: 0(默认) 驾车; 1 公交
+        """
+        func = [self.driving, self.transit][by]
+        res = func(origin, destination, **kwargs)
         if res['status'] == 0:
             res = res['result']
             try:
-                public_duration, public_price = res['routes'][0]['duration'], res['routes'][0]['price']
+                duration = res['routes'][0]['duration']
             except Exception:
-                print('>>> No public info.')
-            try:
-                taxi_duration, taxi_price = res['taxi']['duration'], res['taxi']['detail'][0]['total_price']
-            except Exception:
-                print('>>> No taxi info.')
+                print('>>> No info.')
+                duration = None
 
-        print(f'>>>{origin} TO {destination}: {public_duration}, {public_price}, {taxi_duration}, {taxi_price}')
-        return public_duration, public_price, taxi_duration, taxi_price
+        print(f'>>>{origin} TO {destination}: {duration}')
+        return duration
 
     def search(self, query, **kwargs):
         """地点检索服务

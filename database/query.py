@@ -14,7 +14,7 @@ SPZZ = ZHUZHAI + BIESHU
 
 GONGYU = ('挑高公寓办公', '平层公寓办公')
 XIEZILOU = ('乙级办公', '甲级办公')
-BANGONG = GONGYU + XIEZILOU + ('其他办公',)
+BANGONG = GONGYU + XIEZILOU + ('其它办公',)
 
 SHANGYE = ('底商商业', '专业市场商业', '集中商业', '街区商业', '其它商业')
 

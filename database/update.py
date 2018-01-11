@@ -149,32 +149,24 @@ class Updata(Spider):
         obj = self.load(f'{type_}_{table}/{date}')
         self.market(obj, type_, table)
 
-    def batch_get(self):
+    def batch_get(self, type_, date_list):
         """批量下载json"""
-        # 日期参数 TODO:考虑写成参数
-        # date_list = list(range(201740, 201753))
-        # date_list.append(201801)
-        date_list = [f'2017-{i:02d}-01' for i in range(10, 13)]
-
-        # 日期类型 TODO:考虑写成参数
-        # type_ = 'week'
-        type_ = 'month'
-
         # 表格
         tables = ['sale', 'book', 'sold']
 
         for table, date in itertools.product(tables, date_list):
             self.get_write(type_, date, table)
 
-    def init_db(self):
-        """根据文件夹内json文件初始化数据库"""
-        walk = list(list(os.walk(path)))[1:]
-        for path_, _, files in walk:
-            type_, table = path_.split('\\')[1].split('_')
-            for file in files:
-                date = file.replace('.json', '')
-                print(type_, date, table)
-                self.load_update(type_, date, table)
+
+def init_db(self):
+    """根据文件夹内json文件初始化数据库"""
+    walk = list(list(os.walk(path)))[1:]
+    for path_, _, files in walk:
+        type_, table = path_.split('\\')[1].split('_')
+        for file in files:
+            date = file.replace('.json', '')
+            print(type_, date, table)
+            self.load_update(type_, date, table)
 
 
 if __name__ == '__main__':
@@ -188,5 +180,5 @@ if __name__ == '__main__':
         ud.get_write_update(type_, date, table)
 
     # 批量下载json文件、初始化数据库
-    # ud.batch_get()
+    # ud.batch_get('week', [])
     # ud.init_db()
